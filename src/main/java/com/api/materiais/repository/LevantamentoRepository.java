@@ -7,6 +7,5 @@ import java.util.List;
 
 @Repository
 public interface LevantamentoRepository extends JpaRepository<Levantamento, Long> {
-    // Busca todos os levantamentos de um eletricista específico
-    List<Levantamento> findByTenantId(String tenantId);
+    List<Levantamento> findByTenantId(String tenantId); // Busca isolada por dono
 }

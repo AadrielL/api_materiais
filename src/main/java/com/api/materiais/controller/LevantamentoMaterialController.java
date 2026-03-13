@@ -18,6 +18,7 @@ public class LevantamentoMaterialController {
     @PostMapping("/gerar")
     public ResponseEntity<Levantamento> gerar(@RequestBody LevantamentoRequest req,
                                               @RequestHeader("X-Tenant-ID") String tenantId) {
-        return ResponseEntity.ok(service.gerarParaCliente(req, tenantId));
+        // CORREÇÃO: O nome do método no seu Service é gerarLevantamento
+        return ResponseEntity.ok(service.gerarLevantamento(req, tenantId));
     }
 }

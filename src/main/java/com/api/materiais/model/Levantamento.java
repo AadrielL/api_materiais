@@ -14,5 +14,6 @@ public class Levantamento {
     private String clienteNome;
 
     @OneToMany(cascade = CascadeType.ALL)
+    @JoinColumn(name = "levantamento_id") // ADICIONE ISSO: evita criação de tabela extra
     private List<ItemMaterial> itens;
 }

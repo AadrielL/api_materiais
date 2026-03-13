@@ -1,13 +1,13 @@
 package com.api.materiais.dto.request;
 
-import lombok.Data;
-
-@Data
-public class LevantamentoRequest {
-    private String clienteNome;
-    private int qtdQuartos;
-    private int qtdBanheiros;
-    private int qtdCozinhas;
-    private int qtdChuveiros;
-    private boolean incluirArCondicionado;
-}
+public record LevantamentoRequest(
+        String clienteNome,
+        String telefone,
+        int qtdQuartos,
+        int qtdSalas,
+        int qtdCozinhas,
+        int qtdBanheiros,
+        int qtdChuveiros, // Necessário para a lógica de bitola de cabo
+        int areaTotalM2,
+        String observacoestécnicas
+) {}
