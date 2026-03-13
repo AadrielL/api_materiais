@@ -7,7 +7,8 @@ public record LevantamentoRequest(
         int qtdSalas,
         int qtdCozinhas,
         int qtdBanheiros,
-        int qtdChuveiros, // Necessário para a lógica de bitola de cabo
+        int qtdChuveiros,
+        int qtdPontosEletrica, // <--- Adicionado para a lógica de mangueiras/fios
         int areaTotalM2,
         String observacoestécnicas
 ) {}

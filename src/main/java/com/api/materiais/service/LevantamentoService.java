@@ -4,8 +4,6 @@ import com.api.materiais.dto.request.LevantamentoRequest;
 import com.api.materiais.model.Levantamento;
 import com.api.materiais.model.ItemMaterial;
 import com.api.materiais.repository.LevantamentoRepository;
-import com.api.materiais.engine.DimensionamentoFios;
-import com.api.materiais.engine.RegrasNBR5410;
 import org.springframework.stereotype.Service;
 import java.util.ArrayList;
 import java.util.List;
@@ -14,7 +12,6 @@ import java.util.List;
 public class LevantamentoService {
 
     private final LevantamentoRepository repository;
-    private final DimensionamentoFios dimensionamento = new DimensionamentoFios();
 
     public LevantamentoService(LevantamentoRepository repository) {
         this.repository = repository;
@@ -23,26 +20,29 @@ public class LevantamentoService {
     public Levantamento gerarLevantamento(LevantamentoRequest request, String tenantId) {
         Levantamento levantamento = new Levantamento();
         levantamento.setTenantId(tenantId);
-        levantamento.setClienteNome(request.getClienteNome());
+        levantamento.setClienteNome(request.clienteNome());
 
         List<ItemMaterial> itens = new ArrayList<>();
 
-        // Exemplo de lógica para Chuveiros (TUE)
-        if (request.getQtdChuveiros() > 0) {
-            ItemMaterial chuveiroCabo = new ItemMaterial();
-            // 5500W / 220V = ~25A -> Cabo 4mm ou 6mm
-            String bitola = dimensionamento.selecionarCabo(25.0);
-            chuveiroCabo.setDescricao("Cabo Flexível " + bitola + " para Chuveiros");
-            chuveiroCabo.setQuantidade(request.getQtdChuveiros() * 20.0); // 20m por chuveiro
-            itens.add(chuveiroCabo);
-        }
+        // LÓGICA DE ESTIMATIVA PROFISSIONAL
+        int pontos = request.qtdPontosEletrica() > 0 ? request.qtdPontosEletrica() : (int)(request.areaTotalM2() / 4);
 
-        // Pontos de Tomada e Iluminação
-        int totalPontos = (request.getQtdQuartos() * 4) + (request.getQtdCozinhas() * 5);
-        ItemMaterial eletroduto = new ItemMaterial();
-        eletroduto.setDescricao("Eletroduto Corrugado 3/4 (Reforçado)");
-        eletroduto.setQuantidade(Math.ceil((totalPontos * RegrasNBR5410.METROS_ELETRODUTO_POR_PONTO) / 50));
-        itens.add(eletroduto);
+        // 1. Mangueiras (Eletroduto 3/4) - Estimativa: 3.5m por ponto
+        double metrosMangueira = pontos * 3.5;
+        itens.add(new ItemMaterial("Eletroduto Corrugado 3/4 (Amarelo)", Math.ceil(metrosMangueira / 50.0), "ROLO 50M"));
+
+        // 2. Fiação Geral (2,5mm) - Estimativa: (Metragem * 1.5) + (Pontos * 6m)
+        double metrosFio25 = (request.areaTotalM2() * 1.5) + (pontos * 6);
+        itens.add(new ItemMaterial("Cabo Flexível 2,5mm² (Cores)", Math.ceil(metrosFio25 / 100.0), "ROLO 100M"));
+
+        // 3. Fiação Iluminação (1,5mm)
+        double metrosFio15 = (request.areaTotalM2() * 1.1);
+        itens.add(new ItemMaterial("Cabo Flexível 1,5mm² (Cores)", Math.ceil(metrosFio15 / 100.0), "ROLO 100M"));
+
+        // 4. Circuitos Pesados (Chuveiro)
+        if (request.qtdChuveiros() > 0) {
+            itens.add(new ItemMaterial("Cabo Flexível 6,0mm² (Preto/Azul)", (double)(request.qtdChuveiros() * 40), "METROS"));
+        }
 
         levantamento.setItens(itens);
         return repository.save(levantamento);
