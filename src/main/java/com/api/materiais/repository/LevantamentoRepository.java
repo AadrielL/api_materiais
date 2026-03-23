@@ -7,5 +7,6 @@ import java.util.List;
 
 @Repository
 public interface LevantamentoRepository extends JpaRepository<Levantamento, Long> {
-    List<Levantamento> findByTenantId(String tenantId); // Busca isolada por dono
+    // Busca e ordena pelo ID (que no banco costuma seguir a ordem de inserção)
+    List<Levantamento> findByOrcamentoIdOrderByIdAsc(String orcamentoId);
 }

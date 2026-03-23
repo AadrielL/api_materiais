@@ -10,10 +10,14 @@ public class Levantamento {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
+    // ADICIONE ESTA LINHA: É ela que conecta o levantamento ao orçamento do Front-end
+    private String orcamentoId;
+
     private String tenantId;
     private String clienteNome;
 
     @OneToMany(cascade = CascadeType.ALL)
-    @JoinColumn(name = "levantamento_id") // ADICIONE ISSO: evita criação de tabela extra
+    @JoinColumn(name = "levantamento_id")
     private List<ItemMaterial> itens;
 }

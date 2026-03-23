@@ -18,6 +18,11 @@ public class ItemMaterial {
     private Double quantidade;
     private String unidade;
 
+    // ADICIONE ESTAS LINHAS AQUI:
+    @ManyToOne
+    @JoinColumn(name = "levantamento_id")
+    private Levantamento levantamento;
+
     // Construtor auxiliar usado no Service
     public ItemMaterial(String descricao, Double quantidade, String unidade) {
         this.descricao = descricao;

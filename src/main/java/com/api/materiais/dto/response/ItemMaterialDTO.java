@@ -1,4 +1,4 @@
-package com.api.materiais.dto.reponse;
+package com.api.materiais.dto.response;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
