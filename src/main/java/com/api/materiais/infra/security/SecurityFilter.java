@@ -1,23 +1,25 @@
-package com.api.materiais.infra.security; // Ajuste o package conforme o projeto
+package com.api.materiais.infra.security;
 
 import com.api.materiais.infra.security.service.TokenService;
-import com.api.materiais.infra.security.tenant.TenantContext; //
+import com.api.materiais.infra.security.tenant.TenantContext;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 import java.io.IOException;
+import java.util.Collections;
 
 @Component
 public class SecurityFilter extends OncePerRequestFilter {
 
     @Autowired
-    private TokenService tokenService; //
+    private TokenService tokenService;
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
@@ -26,24 +28,30 @@ public class SecurityFilter extends OncePerRequestFilter {
         var token = this.recoverToken(request);
 
         if (token != null) {
-            var login = tokenService.validateToken(token); // Valida se o token é legítimo
+            var login = tokenService.validateToken(token);
 
-            if (!login.isEmpty()) {
-                var tenantId = tokenService.getTenantIdFromToken(token); // Extrai o Tenant do Token
+            if (login != null && !login.isEmpty()) {
+                var tenantId = tokenService.getTenantIdFromToken(token);
 
-                // Define o Tenant no Contexto (Substitui o antigo Interceptor)
-                TenantContext.setCurrentTenant(tenantId);
+                if (tenantId != null) {
+                    TenantContext.setCurrentTenant(tenantId);
 
-                // Autentica o usuário no Spring Security
-                var authentication = new UsernamePasswordAuthenticationToken(login, null, null);
-                SecurityContextHolder.getContext().setAuthentication(authentication);
+                    // IMPORTANTE: Criar autoridade ROLE_USER para não dar 403
+                    var authority = new SimpleGrantedAuthority("ROLE_USER");
+                    var authentication = new UsernamePasswordAuthenticationToken(
+                            login,
+                            null,
+                            Collections.singletonList(authority)
+                    );
+
+                    SecurityContextHolder.getContext().setAuthentication(authentication);
+                }
             }
         }
 
         try {
             filterChain.doFilter(request, response);
         } finally {
-            // Garante que o Tenant seja limpo após a resposta
             TenantContext.clear();
         }
     }
