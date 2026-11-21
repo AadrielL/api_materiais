@@ -10,10 +10,17 @@
         @Override
         public void addCorsMappings(CorsRegistry registry) {
             registry.addMapping("/**")
-                    .allowedOrigins("http://localhost:4200")
-                    .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
+                    .allowedOriginPatterns(
+                            "http://localhost:*",
+                            "http://127.0.0.1:*",
+                            "https://*.comandosamoris.tech",
+                            "https://comandosamoris.tech",
+                            "http://*.comandosamoris.tech",
+                            "http://comandosamoris.tech"
+                    )
+                    .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH")
                     .allowedHeaders("*")
-                    .exposedHeaders("X-Tenant-ID")
+                    .exposedHeaders("X-Tenant-ID", "Authorization")
                     .allowCredentials(true);
         }
     }
