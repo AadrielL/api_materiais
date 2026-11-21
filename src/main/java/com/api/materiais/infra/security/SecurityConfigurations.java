@@ -41,7 +41,14 @@ public class SecurityConfigurations {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(List.of("http://localhost:4200"));
+        configuration.setAllowedOriginPatterns(List.of(
+                "http://localhost:*",
+                "http://127.0.0.1:*",
+                "https://*.comandosamoris.tech",
+                "https://comandosamoris.tech",
+                "http://*.comandosamoris.tech",
+                "http://comandosamoris.tech"
+        ));
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
 
         // LIBERAÇÃO DOS HEADERS DO INTERCEPTOR
