@@ -265,6 +265,57 @@ public class FerramentasEletrotecnicaController {
         return ResponseEntity.ok(resp);
     }
 
+    /**
+     * 5. Pré-Definição e Calibração de Fios por Padrão de Construção e Feedback Pós-Obra (IA Empírica)
+     */
+    @PostMapping("/calibracao-fios")
+    public ResponseEntity<Map<String, Object>> calibrarFiosPorPadrao(@RequestBody Map<String, Object> body) {
+        String padraoCasa = String.valueOf(body.getOrDefault("padraoCasa", "CASA_PADRAO_MEDIO_LAJE")).toUpperCase();
+        double areaM2 = toDouble(body.get("areaM2"), 120.0);
+        String statusFeedback = String.valueOf(body.getOrDefault("statusFeedback", "CONSULTA")).toUpperCase();
+        double deltaMetros = toDouble(body.get("deltaMetros"), 0.0);
+        double fatorAtual = toDouble(body.get("fatorAtual"), 1.0);
+
+        double c15 = 1.60;
+        double c25 = 2.55;
+        double c40 = 0.95;
+        double c60 = 0.55;
+        String descricaoPadrao = "Casa Térrea Padrão Médio com Laje";
+
+        if ("CASA_POPULAR_TERREA".equals(padraoCasa)) {
+            c15 = 1.35; c25 = 2.10; c40 = 0.65; c60 = 0.45;
+            descricaoPadrao = "Casa Popular / MCMV (Forro PVC)";
+        } else if ("SOBRADO_ALTO_PADRAO".equals(padraoCasa)) {
+            c15 = 1.95; c25 = 3.10; c40 = 1.35; c60 = 0.75;
+            descricaoPadrao = "Sobrado / Alto Padrão (Pé-Direito Duplo + 2 QDCs)";
+        } else if ("APARTAMENTO_DRYWALL".equals(padraoCasa)) {
+            c15 = 1.25; c25 = 1.95; c40 = 0.85; c60 = 0.40;
+            descricaoPadrao = "Apartamento / Alvenaria Estrutural (Forro Gesso)";
+        }
+
+        double totalBase = areaM2 * (c15 + c25 + c40 + c60) * fatorAtual;
+        double novoFator = fatorAtual;
+
+        if ("FALTOU_FIO".equals(statusFeedback) && totalBase > 0) {
+            double razao = Math.min(1.15, (totalBase + Math.abs(deltaMetros)) / totalBase);
+            novoFator = round2((0.85 * fatorAtual) + (0.15 * fatorAtual * razao));
+        } else if ("SOBROU_FIO".equals(statusFeedback) && totalBase > 0) {
+            double razao = Math.max(0.85, (totalBase - Math.abs(deltaMetros)) / totalBase);
+            novoFator = round2((0.85 * fatorAtual) + (0.15 * fatorAtual * razao));
+        }
+
+        Map<String, Object> resp = new LinkedHashMap<>();
+        resp.put("padraoCasa", padraoCasa);
+        resp.put("descricaoPadrao", descricaoPadrao);
+        resp.put("areaM2", areaM2);
+        resp.put("fatorCalibradoIa", novoFator);
+        resp.put("cabo15Mm2Metros", Math.ceil(areaM2 * c15 * novoFator));
+        resp.put("cabo25Mm2Metros", Math.ceil(areaM2 * c25 * novoFator));
+        resp.put("cabo40Mm2Metros", Math.ceil(areaM2 * c40 * novoFator));
+        resp.put("cabo60Mm2Metros", Math.ceil(areaM2 * c60 * novoFator));
+        return ResponseEntity.ok(resp);
+    }
+
     private double areaExternaCaboPvc750V(double secaoNominalMm2) {
         // Diâmetro externo aproximado (cobre + isolação PVC 750V) em mm
         double diametroExternoMm;
