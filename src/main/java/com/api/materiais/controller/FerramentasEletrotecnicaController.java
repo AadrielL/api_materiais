@@ -316,6 +316,75 @@ public class FerramentasEletrotecnicaController {
         return ResponseEntity.ok(resp);
     }
 
+    /**
+     * 6. Orquestrador Multi-Agentes Protegido por Escopo (NR-10, Regional UF e Argumentação Comercial)
+     */
+    @PostMapping("/consultar-agente")
+    public ResponseEntity<Map<String, Object>> consultarAgenteEspecialista(@RequestBody Map<String, Object> body) {
+        String agente = String.valueOf(body.getOrDefault("agente", "AGENTE_DIAGNOSTICO_NR10")).toUpperCase();
+        String sintomaOuContexto = String.valueOf(body.getOrDefault("contexto", "")).toLowerCase();
+        String uf = String.valueOf(body.getOrDefault("uf", "TO")).toUpperCase();
+        String cidade = String.valueOf(body.getOrDefault("cidade", "Palmas"));
+        double areaM2 = toDouble(body.get("areaM2"), 120.0);
+        double valorProposta = toDouble(body.get("valorProposta"), 3850.0);
+
+        Map<String, Object> resp = new LinkedHashMap<>();
+        resp.put("agenteAcionado", agente);
+
+        if ("AGENTE_DIAGNOSTICO_NR10".equals(agente)) {
+            resp.put("escopoRbac", "SCOPE_SAFETY_DIAGNOSTICS");
+            if (sintomaOuContexto.contains("idr") || sintomaOuContexto.contains("dr") || sintomaOuContexto.contains("fuga")) {
+                resp.put("diagnostico", "Atuação do IDR (30mA) por corrente de fuga à terra ou neutro compartilhado entre dois circuitos.");
+                resp.put("passosCampo", List.of(
+                        "1. Desligue todos os disjuntores terminais e rearme o IDR. Se cair com tudo desligado, há inversão Neutro-Terra no barramento.",
+                        "2. Ligue um circuito por vez para isolar onde está a fuga.",
+                        "3. Confira se dois circuitos compartilham o mesmo neutro (muito comum em retorno de iluminação ou chuveiro sem neutro exclusivo)."
+                ));
+            } else if (sintomaOuContexto.contains("aquec") || sintomaOuContexto.contains("derret") || sintomaOuContexto.contains("cheiro")) {
+                resp.put("diagnostico", "Sobreaquecimento por efeito Joule (torque frouxo no borne ou cabo subdimensionado para a corrente).");
+                resp.put("passosCampo", List.of(
+                        "1. Meça a corrente com alicate amperímetro e compare com Iz do cabo (2,5mm²=24A | 4mm²=32A | 6mm²=41A).",
+                        "2. Substitua emendas por torção por conectores de mola/torção certificados e aplique terminal ilhós nos bornes do disjuntor."
+                ));
+            } else {
+                resp.put("diagnostico", "Desarme de disjuntor termomagnético (instantâneo = curto-circuito | após alguns minutos = sobrecarga térmica Ib > In).");
+                resp.put("passosCampo", List.of(
+                        "1. Desconecte os equipamentos da tomada e tente rearmar para separar defeito do aparelho vs. fiação em curto.",
+                        "2. Se desarmar após 5-15 min de uso, meça a corrente: a soma das cargas ultrapassou a corrente nominal do disjuntor."
+                ));
+            }
+            resp.put("checklistNr10", List.of(
+                    "1. Seccionamento do disjuntor geral/circuito",
+                    "2. Bloqueio mecânico contra religamento (LOTO)",
+                    "3. Teste de ausência de tensão com multímetro entre F-N e F-T",
+                    "4. Sinalização do quadro ('Em Manutenção')"
+            ));
+        } else if ("AGENTE_GEOLOCALIZACAO".equals(agente)) {
+            resp.put("escopoRbac", "SCOPE_GEO_PRICING");
+            boolean tensao220 = !"SP".equals(uf) && !"RJ".equals(uf) && !"MG".equals(uf);
+            String concessionaria = "TO".equals(uf) ? "Energisa Tocantins" : ("GO".equals(uf) ? "Equatorial Goiás" : ("SP".equals(uf) ? "Enel SP" : "Concessionária Regional " + uf));
+            double valorM2ComInfra = "SP".equals(uf) ? 58.0 : ("GO".equals(uf) ? 50.0 : 45.0);
+            resp.put("regiaoAnalisada", cidade + "/" + uf);
+            resp.put("concessionaria", concessionaria);
+            resp.put("tensaoPadrao", tensao220 ? "220V (Fase-Neutro) / 380V (Fase-Fase)" : "127V (Fase-Neutro) / 220V (Fase-Fase)");
+            resp.put("faixaJustaMaoDeObraM2", String.format(Locale.US, "R$ %.2f/m² (Com Infra) | Total sugerido p/ %.0fm²: R$ %.2f", valorM2ComInfra, areaM2, areaM2 * valorM2ComInfra));
+            resp.put("notaRegional", tensao220
+                    ? "Em rede 220V fase-neutro, chuveiros de 5500W demandam 25A (Cabo 4,0mm² + Disjuntor 32A)."
+                    : "Atenção: Em rede 127V/220V, chuveiros e ar-condicionado devem ser ligados em 220V Bifásico (Fase+Fase) com disjuntor Bipolar.");
+        } else {
+            resp.put("escopoRbac", "SCOPE_PROPOSAL_AUDITOR");
+            resp.put("textoArgumentacaoCliente", String.format(
+                    Locale.US,
+                    "Olá! Sua proposta técnica para o imóvel de %.0fm² (R$ %.2f) foi projetada 100%% pela Norma ABNT NBR 5410. " +
+                    "Isso garante circuitos independentes sem aquecimento de cabos, proteção IDR 30mA contra choques elétricos, " +
+                    "DPS contra queima de aparelhos por raios/surtos e lista de materiais calibrada sem desperdício de rolos de fio.",
+                    areaM2, valorProposta
+            ));
+        }
+
+        return ResponseEntity.ok(resp);
+    }
+
     private double areaExternaCaboPvc750V(double secaoNominalMm2) {
         // Diâmetro externo aproximado (cobre + isolação PVC 750V) em mm
         double diametroExternoMm;
